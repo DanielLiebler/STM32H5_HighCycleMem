@@ -1,0 +1,38 @@
+{
+    "buildType": {
+        "default": "Debug",
+        "description": "",
+        "choices": {
+            "debug": {
+                "short": "Debug",
+                "long": "Debug",
+                "buildType": "Debug"
+            },
+            "release": {
+                "short": "Release",
+                "long": "Release",
+                "buildType": "Release"
+            }
+        }
+    },
+    "compileType": {
+        "default": "minimal",
+        "description": "verbosity of compiling",
+        "choices": {
+            "minimal": {
+                "short": "Minimal",
+                "long": "Minimal",
+                "settings": {
+                    "CMAKE_VERBOSE_MAKEFILE": "OFF"
+                }
+            },
+            "verbose": {
+                "short": "Verbose",
+                "long": "verbose",
+                "settings": {
+                    "CMAKE_VERBOSE_MAKEFILE": "ON"
+                }
+            }
+        }
+    }
+}

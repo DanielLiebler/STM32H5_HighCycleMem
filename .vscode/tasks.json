@@ -1,0 +1,46 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build CMake",
+            "command": "build",
+            "type": "cmake",
+            "problemMatcher": [],
+        },
+        {
+            "label": "start_eblink",
+            "type": "shell",
+            "command": "C:/Program Files (x86)/EBlink/win32/eblink.exe",
+            "args": [
+                "-I",
+                "stlink",
+                "-S",
+                "auto",
+                "-P",
+                "C:/Program Files (x86)/EBlink/scripts",
+                "-G",
+                "s,nc"
+            ],
+            "isBackground": true,
+            "dependsOn": "build CMake",
+            "problemMatcher": {
+                "owner": "EBlink",
+                "fileLocation": "relative",
+                "pattern": {
+                    "regexp": "GDB Error: [\\s\\S]+",
+                    "message": 1,
+                    "file": 0,
+                    "location": 0,
+                    "kind": "file"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".",//"^EBlink version \\d+\\.\\d+-\\[\\d+\\] by Gerard Zagema*",
+                    "endsPattern": ".",//"^GDB listening \\(0\\.0\\.0\\.0 @ 2331\\)*",
+                }
+            }
+        },
+    ]
+}

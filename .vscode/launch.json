@@ -1,0 +1,84 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Cortex Debug (ebLink)",
+            "cwd": "${workspaceFolder}",
+            "executable": "${command:cmake.buildDirectory}/${command:cmake.buildTargetName}.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "external",
+            "gdbTarget": "localhost:2331",
+            "svdFile": "${workspaceFolder}/src/stm32/stm32h563.svd",
+            "showDevDebugOutput": "none",
+            "breakAfterReset": true,
+            "overrideLaunchCommands": [
+                "monitor reset halt",
+                "load",
+                "monitor reset halt",
+            ],
+            "overrideResetCommands": [
+                "set $sp=*(0x08000000)",
+                "set $pc=*(0x08000004)",
+                "monitor reset halt"
+            ],
+            "preLaunchTask": "start_eblink",
+            "postResetCommands": [
+            ],
+        },
+        {
+            "name": "Cortex Debug (stlink)",
+            "cwd": "${workspaceFolder}",
+            "executable": "${command:cmake.buildDirectory}/${command:cmake.buildTargetName}.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "stlink",
+            "device": "STM32H563ZI",
+            "serverArgs": ["-m 1"],
+            "v1": false,
+            "svdFile": "${workspaceFolder}/src/stm32/stm32h563.svd",
+            "liveWatch": {
+                "enabled": true,
+                "samplesPerSecond": 10
+            },
+            "showDevDebugOutput": "none",
+            "breakAfterReset": true,
+            "postResetCommands": [
+            ],
+        },
+        {
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${command:cmake.buildDirectory}/${command:cmake.buildTargetName}.elf",
+            "name": "Cortex Debug (openOCD)",
+            "device": "STM32G07/08xx",
+            "serverArgs": [],
+            "v1": false,
+            "svdFile": "${workspaceFolder}/build/target.svd",
+            "searchDir": [
+                "C:/ST/STM32CubeIDE_1.14.1/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.debug.openocd_2.2.0.202401261111/resources/openocd/st_scripts",
+                "C:/ST/STM32CubeIDE_1.14.1/STM32CubeIDE/plugins/com.st.stm32cube.ide.mpu.debug.openocd_2.1.100.202402161658/resources/openocd/st_scripts",
+            ],
+            "configFiles": ["stm32h5_debug.cfg"],
+            "liveWatch": {
+                "enabled": false,
+                "samplesPerSecond": 10
+            },
+            "showDevDebugOutput": "raw",
+            "breakAfterReset": true,
+            "overrideLaunchCommands": [
+                "-interpreter-exec console \"monitor reset halt\"",
+                "-target-download",
+               // "-interpreter-exec console \"monitor reset halt\"",
+                "-enable-pretty-printing",
+            ],
+            "postResetCommands": [
+            ],
+        }
+    ]
+}
