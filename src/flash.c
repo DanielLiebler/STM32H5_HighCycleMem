@@ -302,7 +302,6 @@ static bool flashErase(const uint32_t bank, const uint32_t page)
 /**
  * @brief write 128 Bit quad-words into main flash
  * @warning WRITE_CRITICAL_SECTION deaktivates all interrupts for the critical write section. define as required.
- * @warning Check für UserFlash deaktiviert
  * @note CHECK_HDP defines if the addresses should be checked for HDP locks
  * @note CHECK_WRP defines if the addresses should be checked for WRP locks
  *
@@ -388,7 +387,6 @@ static bool flashWrite128 (uint32_t *address, const uint32_t *data, const uint32
 /**
  * @brief write 16 bits half-words to high cyclic flash
  * @warning WRITE_CRITICAL_SECTION deaktivates all interrupts for the critical write section. define as required.
- * @warning Check für UserFlash deaktiviert
  * @note CHECK_HDP defines if the addresses should be checked for HDP locks
  * @note CHECK_WRP defines if the addresses should be checked for WRP locks
  *
@@ -477,10 +475,23 @@ void __attribute__((used)) highCyclic_setArea(const uint32_t sectorCountBank1, c
 // ----------------------------------------------------------------------------
 // extern section
 // ----------------------------------------------------------------------------
+/**
+ * @brief external function to erase a flash page
+ * 
+ * @param bank Bank 1 or 2
+ * @param page page number
+ */
 void flash_erase(const uint8_t bank, const uint8_t page)
 {
     flashErase(bank, page);
 }
+/**
+ * @brief external function to write half-words to a flash
+ * 
+ * @param address target address
+ * @param data data to write
+ * @param size amount of bytes to write
+ */
 void flash_write16(uint16_t* address, const uint16_t data, const uint32_t size)
 {
     uint32_t bank = highCyclic_getBank(address, 1);
