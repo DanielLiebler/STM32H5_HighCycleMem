@@ -26,5 +26,6 @@
 
 extern void flash_erase(const uint8_t bank, const uint8_t page);
 extern void flash_write16(uint16_t* address, const uint16_t data, const uint32_t size);
+extern void highCyclic_setArea(const uint32_t sectorCountBank1, const uint32_t sectorCountBank2);
 
 #endif // FLASH_H

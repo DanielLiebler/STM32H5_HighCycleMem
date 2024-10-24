@@ -6,6 +6,8 @@
 
 #define FLASH_KEY1              (0x45670123UL)
 #define FLASH_KEY2              (0xCDEF89ABUL)
+#define FLASH_OPT_KEY1          (0x08192A3BUL)
+#define FLASH_OPT_KEY2          (0x4C5D6E7FUL)
 
 #define FLASH_ERROR_FLAGS       (FLASH_SR_OPTCHANGEERR | FLASH_SR_INCERR | FLASH_SR_STRBERR | FLASH_SR_PGSERR | FLASH_SR_WRPERR)
 #define FLASH_OP_INCOMPLETE     (FLASH_SR_BSY | FLASH_SR_DBNE | FLASH_SR_WBNE)
@@ -159,30 +161,83 @@ static uint32_t flash_getBank(const void* address, const uint32_t size)
 }
 
 /**
- * @brief set the area of which pages should be treated as high cyclic
- * 
- * @param reg the EDATAR for the corresponding bank to set the area for
- * @param sectorCount the amount of sectors to use. 0 deactivates high cyclic memory
- */
-static void highCyclic_setArea_internal(volatile uint32_t *reg, const uint32_t sectorCount)
-{
-    if (sectorCount > 0)
-    {
-        *reg = FLASH_EDATAR_EDATA_EN | (((sectorCount - 1) & 0x7) << FLASH_EDATAR_EDATA_STRT_Pos);
-    }
-    else
-    {
-        *reg = (0 << FLASH_EDATAR_EDATA_EN_Pos) | (0 << FLASH_EDATAR_EDATA_STRT_Pos);
-    }
-}
-
-/**
  * @brief unlock the Flash for modification by unlocking NSKEYR
  */
 static void unlockFlash()
 {
     FLASH->NSKEYR = FLASH_KEY1;
     FLASH->NSKEYR = FLASH_KEY2;
+}
+
+/**
+ * @brief unlock the Flash for modification of option bytes by unlocking OPTKEYR
+ */
+static void unlockFlashOptionBytes()
+{
+    FLASH->OPTKEYR = FLASH_OPT_KEY1;
+    FLASH->OPTKEYR = FLASH_OPT_KEY2;
+}
+
+/**
+ * @brief set the area of which pages should be treated as high cyclic
+ * 
+ * @param reg the EDATAR for the corresponding bank to set the area for
+ * @param sectorCount the amount of sectors to use. 0 deactivates high cyclic memory
+ */
+static void highCyclic_setArea_internal(const uint32_t bank, const uint32_t sectorCount)
+{
+    volatile uint32_t *eDataRegCur;
+    volatile uint32_t *eDataRegProg;
+    if (bank == 1)
+    {
+        eDataRegCur = &(FLASH->EDATA1R_CUR);
+        eDataRegProg = &(FLASH->EDATA1R_PRG);
+    }
+    else if (bank == 2)
+    {
+        eDataRegCur = &(FLASH->EDATA2R_CUR);
+        eDataRegProg = &(FLASH->EDATA2R_PRG);
+    }
+    else
+    {
+        return;
+    }
+
+    uint32_t configuration;
+    if (sectorCount > 0)
+    {
+        configuration = FLASH_EDATAR_EDATA_EN | (((sectorCount - 1) & 0x7) << FLASH_EDATAR_EDATA_STRT_Pos);
+    }
+    else
+    {
+        configuration = (0 << FLASH_EDATAR_EDATA_EN_Pos) | (0 << FLASH_EDATAR_EDATA_STRT_Pos);
+    }
+
+    // check if configuration is already present
+    if (*eDataRegCur == configuration)
+    {
+        return;
+    }
+
+    // check error flags and BSY, DBNE, WBNE
+    RETURN_TRUE_IF_TRUE((FLASH->NSSR & (FLASH_ERROR_FLAGS | FLASH_OP_INCOMPLETE)) != 0)
+
+    // unlock flash option bytes
+    unlockFlashOptionBytes();
+    
+
+    // write configuration data into programming register
+    *eDataRegProg = configuration;
+
+    // start flashing
+    FLASH->OPTCR |= FLASH_OPTCR_OPTSTART;
+
+    // wait for bsy clear
+    while (FLASH->NSSR & FLASH_SR_BSY) {};
+
+    // lock flash again
+    FLASH->OPTCR = FLASH_OPTCR_OPTLOCK;
+
 }
 
 /**
@@ -220,9 +275,8 @@ static bool flashErase(const uint32_t bank, const uint32_t page)
     }
 
     // set bksel, ser and snb in NSCR
-    uint32_t uFlashSNB = page << FLASH_CR_SNB_Pos;
     uint32_t nscrMsk = FLASH_CR_OPTCHANGEERRIE | FLASH_CR_INCERRIE | FLASH_CR_STRBERRIE | FLASH_CR_PGSERRIE | FLASH_CR_WRPERRIE | FLASH_CR_EOPIE;
-    FLASH->NSCR = (FLASH->NSCR & nscrMsk) | uFlashSNB | ((bank-1) << FLASH_CR_BKSEL_Pos) | FLASH_CR_SER;
+    FLASH->NSCR = (FLASH->NSCR & nscrMsk) | (page << FLASH_CR_SNB_Pos) | ((bank-1) << FLASH_CR_BKSEL_Pos) | FLASH_CR_SER;
     
     // wait for bsy clear
     while (FLASH->NSSR & FLASH_SR_BSY) {};
@@ -293,7 +347,7 @@ static bool flashWrite128 (uint32_t *address, const uint32_t *data, const uint32
     // Write Data Section
 #ifdef WRITE_CRITICAL_SECTION
     // Enter critical section: Disable interrupts to avoid any interruption during the loop
-    uint32_t primask_bit = __get_PRIMASK();
+    uint32_t primaskBit = __get_PRIMASK();
     __disable_irq();
 #endif
 
@@ -311,7 +365,7 @@ static bool flashWrite128 (uint32_t *address, const uint32_t *data, const uint32
     
 #ifdef WRITE_CRITICAL_SECTION
     // Exit critical section: restore previous priority mask
-    __set_PRIMASK(primask_bit);
+    __set_PRIMASK(primaskBit);
 #endif
 
     // cleanup after write and check errors
@@ -378,7 +432,7 @@ static bool highCyclic_write16(uint16_t *address, const uint16_t *data, const ui
 
 #ifdef WRITE_CRITICAL_SECTION
     // Enter critical section: Disable interrupts to avoid any interruption during the loop
-    uint32_t primask_bit = __get_PRIMASK();
+    uint32_t primaskBit = __get_PRIMASK();
     __disable_irq();
 #endif
 
@@ -390,7 +444,7 @@ static bool highCyclic_write16(uint16_t *address, const uint16_t *data, const ui
     
 #ifdef WRITE_CRITICAL_SECTION
     // Exit critical section: restore previous priority mask
-    __set_PRIMASK(primask_bit);
+    __set_PRIMASK(primaskBit);
 #endif
 
     // wait for bsy clear
@@ -414,10 +468,10 @@ static bool highCyclic_write16(uint16_t *address, const uint16_t *data, const ui
  * @param sectorCountBank1 amount of sectors in bank 1
  * @param sectorCountBank2 amount of sectors in bank 2
  */
-static void __attribute__((used)) highCyclic_setArea(const uint32_t sectorCountBank1, const uint32_t sectorCountBank2)
+void __attribute__((used)) highCyclic_setArea(const uint32_t sectorCountBank1, const uint32_t sectorCountBank2)
 {
-    highCyclic_setArea_internal(&(FLASH->EDATA1R_PRG), sectorCountBank1);
-    highCyclic_setArea_internal(&(FLASH->EDATA2R_PRG), sectorCountBank2);
+    highCyclic_setArea_internal(1, sectorCountBank1);
+    highCyclic_setArea_internal(2, sectorCountBank2);
 }
 
 // ----------------------------------------------------------------------------

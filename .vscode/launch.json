@@ -37,7 +37,7 @@
             "type": "cortex-debug",
             "servertype": "stlink",
             "device": "STM32H563ZI",
-            "serverArgs": ["-m 1"],
+            "serverArgs": ["-m 1", "-f c:/svnwork/stl_log2.txt", "--preserve-temps"],
             "v1": false,
             "svdFile": "${workspaceFolder}/src/stm32/stm32h563.svd",
             "liveWatch": {

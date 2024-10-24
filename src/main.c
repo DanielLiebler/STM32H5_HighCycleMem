@@ -2,6 +2,10 @@
 #include "stm32h563.h"
 #include "flash.h"
 
+//#define TEST1
+#define TEST2
+
+#ifdef TEST1
 volatile __USED __attribute__((section (".hcflash"))) uint16_t test_data[] = {
     0x0738,
     0x0E70,
@@ -21,13 +25,18 @@ volatile __USED __attribute__((section (".hcflash"))) uint16_t test_data[] = {
     0x039C,
     0x0738
 };
+
 volatile __USED bool data_section_integrity;
+#endif
 
 int main (void)
 {
+    highCyclic_setArea(8, 8);
+
     // ------------------------------------------------------------------------
     // Check integrity of test_data section
     // ------------------------------------------------------------------------
+#ifdef TEST1
     uint16_t correct_val = 0x0738;
     uint16_t* flash_ptr = (uint16_t*) &test_data;
     data_section_integrity = true;
@@ -53,31 +62,35 @@ int main (void)
         // check next pointer
         flash_ptr++;
     }
-    
+#endif
 
     // ------------------------------------------------------------------------
     // Cyclic write into high cyclic memory to test gdb reads
     // ------------------------------------------------------------------------
-    while (1)
+#ifdef TEST2
+    for (;;)
     {
+        // <============================================== BREAKPOINT 1 here
         // erase flash bank 2, page 120
-        flash_erase(2, HIGH_CYCLIC_PAGE_OFFSET); // <========================= BREAKPOINT 1 here
+        flash_erase(2, HIGH_CYCLIC_PAGE_OFFSET);
         flash_write16((uint16_t*) (HIGH_CYCLIC_START_BANK2), 0x0123, 2);
         flash_write16((uint16_t*) (HIGH_CYCLIC_START_BANK2 + 2), 0x4567, 2);
         flash_write16((uint16_t*) (HIGH_CYCLIC_START_BANK2 + 4), 0x89AB, 2);
         flash_write16((uint16_t*) (HIGH_CYCLIC_START_BANK2 + 6), 0xCDEF, 2);
 
-        //__builtin_trap();
-
+        // <============================================== BREAKPOINT 2 here
         // erase flash bank 2, page 120
-        flash_erase(2, HIGH_CYCLIC_PAGE_OFFSET); // <========================= BREAKPOINT 2 here
+        flash_erase(2, HIGH_CYCLIC_PAGE_OFFSET); 
         flash_write16((uint16_t*) (HIGH_CYCLIC_START_BANK2), 0x7f7f, 2);
         flash_write16((uint16_t*) (HIGH_CYCLIC_START_BANK2 + 2), 0x5d5d, 2);
         flash_write16((uint16_t*) (HIGH_CYCLIC_START_BANK2 + 4), 0xc8c8, 2);
         flash_write16((uint16_t*) (HIGH_CYCLIC_START_BANK2 + 6), 0x0101, 2);
 
-        //__builtin_trap();
-
+    }
+#else
+    for (;;)
+    {
     }
     
+#endif
 }
